@@ -43,7 +43,7 @@ fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<Vec<Client>>>) {
         }
 
         let remoteaddr: String = stream.peer_addr().unwrap().to_string();
-        let response = format!("{}\n", remoteaddr);
+        let response = format!("you are: {}\n", remoteaddr);
         stream
             .write(response.as_bytes())
             .expect("message couldnt be sent");
