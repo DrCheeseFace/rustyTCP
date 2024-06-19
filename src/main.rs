@@ -2,14 +2,15 @@ use std::collections::HashMap;
 use std::io::prelude::*;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
+mod commands;
 
-struct Client {
+pub struct Client {
     stream: TcpStream,
     addr: SocketAddr,
 }
 
 impl Client {
-    fn new(stream: TcpStream) -> Self {
+    pub fn new(stream: TcpStream) -> Self {
         let addr = stream.peer_addr().unwrap();
         Self { stream, addr }
     }
@@ -18,47 +19,53 @@ impl Client {
 fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<HashMap<SocketAddr, Client>>>) {
     let mut buffer = [0; 1024];
     loop {
-        stream
-            .write("send a message: ".as_bytes())
-            .expect("message couldnt be sent");
+        stream.write("send a messsage: ".as_bytes()).unwrap();
 
         //get message from client
-        let bytes_read = stream
-            .read(&mut buffer)
-            .expect("failed to read from client");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
-        println!(
-            "message from: {}: {}",
-            stream.peer_addr().unwrap().to_string(),
-            request.trim()
-        );
+        let mut request = String::new();
+        match stream.read(&mut buffer) {
+            Ok(bytes_read) => {
+                if bytes_read == 0 {
+                    println!("client disconnected");
+                    break;
+                }
+                request = String::from_utf8_lossy(&buffer[..bytes_read])
+                    .trim()
+                    .to_string();
+                println!(
+                    "message from: {}: {}",
+                    stream.peer_addr().unwrap().to_string(),
+                    request
+                );
+            }
+            Err(e) => eprintln!("error be like {}", e),
+        };
 
-        //command to terminate connection
-        if request.trim() == "quit" {
-            stream
-                .write("goodbye\n".as_bytes())
-                .expect("message couldnt be sent");
-            break;
+        match request.as_str() {
+            "quit" => {
+                commands::handle_quit(&stream);
+                break;
+            }
+            "update" => {
+                commands::handle_update(&stream, &clients);
+                continue;
+            }
+            "number" => {
+                commands::handle_number(&stream, &clients);
+                continue;
+            }
+            _ => {
+                stream.write("invalid command\n".as_bytes()).unwrap();
+            }
         }
+    }
 
-        //command to see all connected clients
-        if request.trim() == "update" {
-            let clients = clients.lock().unwrap();
-            let response = format!(
-                "{:?}\n",
-                clients.get(&stream.peer_addr().unwrap()).unwrap().addr
-            );
-            stream
-                .write(response.as_bytes())
-                .expect("message couldnt be sent");
-            continue;
-        }
-
-        let remoteaddr: String = stream.peer_addr().unwrap().to_string();
-        let response = format!("HIIII {}", remoteaddr);
-        stream
-            .write(response.as_bytes())
-            .expect("message couldnt be sent");
+    //remove disconnected clients from client list
+    let addr = stream.peer_addr().unwrap();
+    {
+        let mut clients = clients.lock().unwrap();
+        clients.remove(&addr);
+        println!("Client {} removed. Total clients: {}", addr, clients.len());
     }
 }
 
