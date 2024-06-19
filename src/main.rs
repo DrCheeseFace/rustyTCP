@@ -26,12 +26,12 @@ fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<Vec<Client>>>) {
             .read(&mut buffer)
             .expect("failed to read from client");
         let request = String::from_utf8_lossy(&buffer[..bytes_read]);
-        println!("received request: {}", request);
+        println!("received request: {}", request.trim());
 
         //command to terminate connection
         if request.trim() == "quit" {
             stream
-                .write("goodbye".as_bytes())
+                .write("goodbye\n".as_bytes())
                 .expect("message couldnt be sent");
             break;
         }
@@ -60,17 +60,17 @@ fn main() {
     let clients = Arc::new(Mutex::new(Vec::new()));
     let addr: &str = "127.0.0.1:6969";
     let listener = TcpListener::bind(addr).expect("couldnt bind to {addr}");
+    println!("server listening on {addr}");
     for stream in listener.incoming() {
-        println!("server listening on {addr}");
         match stream {
             Ok(stream) => {
-                //dafak????
-                let clients = clients.clone();
-                //there HAS to be a better way of doing this
+                println!("connected to {}", stream.peer_addr().unwrap());
+
                 {
-                    let mut clients = clients.lock().unwrap();
-                    clients.push(Client::new(stream.try_clone().unwrap()));
+                    let mut client_list = clients.lock().unwrap();
+                    client_list.push(Client::new(stream.try_clone().unwrap()));
                 }
+                let clients = clients.clone();
                 std::thread::spawn(|| handle_client(stream, clients));
             }
             Err(e) => {
