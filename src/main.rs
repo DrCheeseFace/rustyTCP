@@ -18,7 +18,7 @@ fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<Vec<Client>>>) {
     let mut buffer = [0; 1024];
     loop {
         stream
-            .write("gimme a message: ".as_bytes())
+            .write("send a message: ".as_bytes())
             .expect("message couldnt be sent");
 
         //get message from client
@@ -26,7 +26,11 @@ fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<Vec<Client>>>) {
             .read(&mut buffer)
             .expect("failed to read from client");
         let request = String::from_utf8_lossy(&buffer[..bytes_read]);
-        println!("received request: {}", request.trim());
+        println!(
+            "message from: {}: {}",
+            stream.peer_addr().unwrap().to_string(),
+            request.trim()
+        );
 
         //command to terminate connection
         if request.trim() == "quit" {
@@ -71,7 +75,7 @@ fn main() {
                     client_list.push(Client::new(stream.try_clone().unwrap()));
                 }
                 let clients = clients.clone();
-                std::thread::spawn(|| handle_client(stream, clients));
+                std::thread::spawn(move || handle_client(stream, clients));
             }
             Err(e) => {
                 eprintln!("failed to establish connection: {}", e)
