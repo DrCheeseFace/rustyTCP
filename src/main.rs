@@ -1,11 +1,17 @@
 use std::io::prelude::*;
-use std::net::TcpListener;
-use std::net::TcpStream;
+use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 
 struct Client {
     stream: TcpStream,
     addr: String,
+}
+
+impl Client {
+    fn new(stream: TcpStream) -> Self {
+        let addr = stream.peer_addr().unwrap().to_string();
+        Self { stream, addr }
+    }
 }
 
 fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<Vec<Client>>>) {
@@ -60,14 +66,10 @@ fn main() {
             Ok(stream) => {
                 //dafak????
                 let clients = clients.clone();
-
                 //there HAS to be a better way of doing this
                 {
                     let mut clients = clients.lock().unwrap();
-                    clients.push(Client {
-                        stream: stream.try_clone().expect("couldnt clone stream"),
-                        addr: stream.peer_addr().unwrap().to_string(),
-                    });
+                    clients.push(Client::new(stream.try_clone().unwrap()));
                 }
                 std::thread::spawn(|| handle_client(stream, clients));
             }
