@@ -1,3 +1,4 @@
+use serde_json::{Result, Value};
 use std::collections::HashMap;
 use std::io::prelude::*;
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -19,8 +20,6 @@ impl Client {
 fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<HashMap<SocketAddr, Client>>>) {
     let mut buffer = [0; 1024];
     loop {
-        stream.write("send a messsage: ".as_bytes()).unwrap();
-
         //get message from client
         let mut request = String::new();
         match stream.read(&mut buffer) {
@@ -40,8 +39,9 @@ fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<HashMap<SocketAddr, C
             }
             Err(e) => eprintln!("error be like {}", e),
         };
+        let v: Value = serde_json::from_str(request.as_str()).unwrap();
 
-        match request.as_str() {
+        match v["command"].as_str().unwrap() {
             "quit" => {
                 commands::handle_quit(&stream);
                 break;
