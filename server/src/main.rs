@@ -1,4 +1,4 @@
-use serde_json::{Result, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::io::prelude::*;
 use std::net::{SocketAddr, TcpListener, TcpStream};
