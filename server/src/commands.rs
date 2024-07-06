@@ -46,7 +46,7 @@ pub fn handle_request(
     match v["command"].as_str().unwrap() {
         "quit" => {
             handle_quit(&stream);
-            return Actions::Exit;
+            return Actions::Quit;
         }
         "update" => {
             handle_update(&stream, &clients);

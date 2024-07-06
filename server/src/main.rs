@@ -41,7 +41,7 @@ fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<HashMap<SocketAddr, C
         };
         let v: Value = serde_json::from_str(request.as_str()).unwrap();
         let action = commands::handle_request(&stream, v, &clients);
-        if action == commands::Actions::Quit{
+        if action == commands::Actions::Quit {
             break;
         }
     }
