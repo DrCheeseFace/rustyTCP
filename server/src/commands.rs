@@ -36,7 +36,7 @@ fn handle_auth(
     mut stream: &TcpStream,
     clients: &Arc<Mutex<HashMap<SocketAddr, Client>>>,
     authcode: String,
-) -> bool {
+) -> Actions {
     if clients
         .lock()
         .unwrap()
@@ -45,7 +45,7 @@ fn handle_auth(
         .isauth
     {
         stream.write("already authed\n".as_bytes()).unwrap();
-        return true;
+        return Actions::AuthSuccessful;
     } else {
         let mut buffer = [0; 1024];
         stream.write("enter authcode\n".as_bytes()).unwrap();
@@ -71,17 +71,17 @@ fn handle_auth(
                             .unwrap()
                             .isauth = true;
                     }
-                    return true;
+                    return Actions::AuthSuccessful;
                 } else {
                     stream.write("wrong authcode\n".as_bytes()).unwrap();
                     stream.write("auth FAILURE".as_bytes()).unwrap();
-                    return false;
+                    return Actions::AuthFailure;
                 }
             }
             Err(e) => eprintln!("error be like {}", e),
         };
     }
-    return false;
+    return Actions::AuthFailure;
 }
 
 fn handle_number(mut stream: &TcpStream, clients: &Arc<Mutex<HashMap<SocketAddr, Client>>>) {
@@ -112,11 +112,7 @@ pub fn handle_request(
             return Actions::Number;
         }
         "auth" => {
-            let auth_success = handle_auth(&stream, &mut clients, authcode);
-            if auth_success {
-                return Actions::AuthSuccessful;
-            }
-            return Actions::AuthFailure;
+            return handle_auth(&stream, &mut clients, authcode);
         }
         _ => {
             stream.write("invalid command\n".as_bytes()).unwrap();
