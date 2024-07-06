@@ -40,23 +40,9 @@ fn handle_client(mut stream: TcpStream, clients: Arc<Mutex<HashMap<SocketAddr, C
             Err(e) => eprintln!("error be like {}", e),
         };
         let v: Value = serde_json::from_str(request.as_str()).unwrap();
-
-        match v["command"].as_str().unwrap() {
-            "quit" => {
-                commands::handle_quit(&stream);
-                break;
-            }
-            "update" => {
-                commands::handle_update(&stream, &clients);
-                continue;
-            }
-            "number" => {
-                commands::handle_number(&stream, &clients);
-                continue;
-            }
-            _ => {
-                stream.write("invalid command\n".as_bytes()).unwrap();
-            }
+        let action = commands::handle_request(&stream, v, &clients);
+        if action == commands::Actions::Quit{
+            break;
         }
     }
 
