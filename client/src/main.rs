@@ -11,12 +11,13 @@ fn main() -> std::io::Result<()> {
     loop {
         // write to stream
         let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("error: unable to read user input");
         if input.trim() == "quit" {
             break;
         }
+
+        io::stdin()
+            .read_line(&mut input)
+            .expect("error: unable to read user input");
 
         let json = json!({
             "command":input.trim(),
