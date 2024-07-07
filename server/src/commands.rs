@@ -46,41 +46,39 @@ fn handle_auth(
     {
         stream.write("already authed\n".as_bytes()).unwrap();
         return Actions::AuthSuccessful;
-    } else {
-        let mut buffer = [0; 1024];
-        stream.write("enter authcode\n".as_bytes()).unwrap();
-        match stream.read(&mut buffer) {
-            Ok(bytes_read) => {
-                let request = String::from_utf8_lossy(&buffer[..bytes_read]);
-                let v: Value = serde_json::from_str(&request).unwrap();
-                let requestcode = v["command"].as_str().unwrap();
-
-                if requestcode == authcode {
-                    clients
-                        .lock()
-                        .unwrap()
-                        .get_mut(&stream.peer_addr().unwrap())
-                        .unwrap()
-                        .isauth = true;
-                    stream.write("auth SUCCESSFUL\n".as_bytes()).unwrap();
-
-                    {
-                        let mut client_list = clients.lock().unwrap();
-                        client_list
-                            .get_mut(&stream.peer_addr().unwrap())
-                            .unwrap()
-                            .isauth = true;
-                    }
-                    return Actions::AuthSuccessful;
-                } else {
-                    stream.write("wrong authcode\n".as_bytes()).unwrap();
-                    stream.write("auth FAILURE".as_bytes()).unwrap();
-                    return Actions::AuthFailure;
-                }
-            }
-            Err(e) => eprintln!("error be like {}", e),
-        };
     }
+    let mut buffer = [0; 1024];
+    stream.write("enter authcode\n".as_bytes()).unwrap();
+    match stream.read(&mut buffer) {
+        Ok(bytes_read) => {
+            let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+            let v: Value = serde_json::from_str(&request).unwrap();
+            let requestcode = v["command"].as_str().unwrap();
+
+            if requestcode != authcode {
+                stream.write("wrong authcode\n".as_bytes()).unwrap();
+                stream.write("auth FAILURE".as_bytes()).unwrap();
+                return Actions::AuthFailure;
+            }
+            clients
+                .lock()
+                .unwrap()
+                .get_mut(&stream.peer_addr().unwrap())
+                .unwrap()
+                .isauth = true;
+            stream.write("auth SUCCESSFUL\n".as_bytes()).unwrap();
+
+            {
+                let mut client_list = clients.lock().unwrap();
+                client_list
+                    .get_mut(&stream.peer_addr().unwrap())
+                    .unwrap()
+                    .isauth = true;
+            }
+            return Actions::AuthSuccessful;
+        }
+        Err(e) => eprintln!("error be like {}", e),
+    };
     return Actions::AuthFailure;
 }
 
